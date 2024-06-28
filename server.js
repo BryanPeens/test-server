@@ -4,8 +4,12 @@ const app = express();
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const cors = require('cors');
 const morgan = require('morgan');
+const helmet = require('helmet');
 
-// Use morgan to log requests
+// Use helmet to set secure HTTP headers
+app.use(helmet());
+
+// Use morgan to log requests in combined format
 app.use(morgan('combined'));
 
 app.use(express.json());
@@ -26,8 +30,8 @@ app.post('/create-checkout-session', async (req, res) => {
   const successUrl = isProduction ? `${process.env.CLIENT_URL_PROD}/success` : `${process.env.CLIENT_URL}/success`;
   const cancelUrl = isProduction ? `${process.env.CLIENT_URL_PROD}/cancel` : `${process.env.CLIENT_URL}/cancel`;
 
-  // Log the received request body
-  console.log('Received create-checkout-session request:', req.body);
+  // Log the received request body, excluding sensitive data
+  console.log('Received create-checkout-session request with line items:', lineItems);
 
   try {
     const session = await stripe.checkout.sessions.create({
@@ -38,12 +42,12 @@ app.post('/create-checkout-session', async (req, res) => {
       cancel_url: cancelUrl,
     });
 
-    // Log the created session
-    console.log('Checkout session created:', session);
+    // Log the created session ID (not the entire session object for security reasons)
+    console.log('Checkout session created with ID:', session.id);
 
     res.json({ id: session.id });
   } catch (err) {
-    console.error('Error creating checkout session:', err);
+    console.error('Error creating checkout session:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
